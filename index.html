@@ -37,7 +37,7 @@ h1{font-size:22px;margin:0 0 4px}
 h3{font-size:13px;margin:14px 0 6px}
 .facts{margin:0 0 8px;font-size:13px;color:var(--mu)}
 .bars{display:flex;gap:6px;overflow-x:auto;align-items:flex-end;padding-bottom:4px}
-.bar{display:flex;flex-direction:column;align-items:center;min-width:38px;font-size:11px;color:var(--mu)}
+.bar{display:flex;flex-direction:column;align-items:center;min-width:44px;font-size:11px;color:var(--mu)}
 .bar .v{color:var(--wa);font-weight:600;font-size:12px}
 .bar i{display:block;width:16px;background:var(--wa);opacity:.75;border-radius:4px 4px 1px 1px;margin:2px 0}
 .cin{display:flex;gap:8px;width:100%;margin:6px 0}
@@ -74,7 +74,7 @@ textarea{width:100%;height:80px;margin:6px 0}
 </head>
 <body>
 <main>
-<h1>植物浇水</h1>
+<h1>浇水记录</h1>
 <div class="top"><span id="sum"></span><button id="sortBtn" class="link" type="button"></button></div>
 <button id="syn" type="button"></button>
 <p id="msg" role="status"></p>
@@ -92,7 +92,7 @@ textarea{width:100%;height:80px;margin:6px 0}
 <details class="bk"><summary>备份与恢复</summary>
 <textarea id="ta" aria-label="备份内容" placeholder="导出的内容会显示在这里；导入时把备份文本粘贴到这里"></textarea>
 <div id="bkBtns"></div></details>
-<p class="hint">图例：柱子上方是浇水间隔天数，红色表示不少于最近几次中位数的 1.5 倍；柱子下方是期间室外平均气温，红色表示偏离所有间隔平均值 1.5 个标准差以上；虚线柱是“至今”未浇的天数。左侧蓝色条表示已到预计浇水时间（按最近几次间隔的中位数推算，仅供参考）。数据保存在你的 GitHub 数据仓库里，本机也留有一份缓存。</p>
+<p class="hint">图例：柱子上方是浇水间隔天数，红色表示不少于最近几次中位数的 1.5 倍；柱子下方依次是该期间的室外平均气温、最高气温（↑）和最低气温（↓），最高和最低取期间内每日最高、最低气温的极值；期间超过 4 周时，不显示最高和最低，改显示每日平均气温的中位数；虚线柱是“至今”未浇的天数。左侧蓝色条表示已到预计浇水时间（按最近几次间隔的中位数推算，仅供参考）。数据保存在你的 GitHub 数据仓库里，本机也留有一份缓存。</p>
 </main>
 <script>
 "use strict";
@@ -120,7 +120,7 @@ function stats(p){const w=p.w,t=today(),last=w.length?w[w.length-1]:null,iv=w.sl
  const base=iv.length?med(iv.slice(-5)):null,due=last&&base!=null?addDays(last,Math.max(1,Math.round(base))):null;
  return{last,iv,base,due,since:last?diff(last,t):null,isDue:!!due&&due<=t}}
 const find=id=>plants.find(p=>p.id===id);
-function refresh(id){gT=tstat();const old=document.querySelector('[data-id="'+id+'"]');if(!old){renderAll();return}
+function refresh(id){const old=document.querySelector('[data-id="'+id+'"]');if(!old){renderAll();return}
  const n=renderPlant(find(id));old.replaceWith(n);n.querySelectorAll(".bars").forEach(b=>b.scrollLeft=b.scrollWidth);summary()}
 function commit(id){save();refresh(id)}
 function toggleToday(id){const p=find(id),t=today(),i=p.w.indexOf(t);if(i>=0)p.w.splice(i,1);else p.w.push(t);p.w.sort();commit(id)}
@@ -146,12 +146,13 @@ function detail(p,s,t){
 
  const m5=s.iv.length>=3?med(s.iv.slice(-5)):null;
  d.append(el("p","facts",s.last?"上次 "+s.last+"（"+ago(s.last,t)+"）"+(s.base!=null?" · 通常 "+fmt(s.base)+" 天 · 预计下次 "+s.due:""):"还没有记录"));
- const items=s.iv.map((v,i)=>({v,ty:typ(s.iv,i),tm:avgT(p.w[i],p.w[i+1]),lb:md(p.w[i+1])}));
- if(s.last&&s.since>0)items.push({v:s.since,ty:typ(s.iv,s.iv.length),tm:avgT(s.last,t),lb:"至今",cur:1});
+ const items=s.iv.map((v,i)=>({v,ty:typ(s.iv,i),ti:tinfo(p.w[i],p.w[i+1]),lb:md(p.w[i+1])}));
+ if(s.last&&s.since>0)items.push({v:s.since,ty:typ(s.iv,s.iv.length),ti:tinfo(s.last,t),lb:"至今",cur:1});
  if(items.length){const bars=el("div","bars"),mx=Math.max(...items.map(x=>x.v),1);
   items.forEach(x=>{const lg=x.ty!=null&&x.v>=1.5*x.ty,b=el("div","bar"+(lg?" long":"")+(x.cur?" cur":"")),c=el("i");
    c.style.height=Math.max(6,40*x.v/mx)+"px";b.append(el("span","v"+(lg?" x":""),x.v),c);
-   if(x.tm!=null){const ex=gT&&Math.abs(x.tm-gT.m)>1.5*gT.s;b.append(el("span","t"+(ex?" x":""),tl(x.tm)+(ex?(x.tm>gT.m?"↑":"↓"):"")))}
+   if(x.ti){const ti=x.ti;b.append(el("span","t",tl(ti.m)));
+    if(ti.long)b.append(el("span","t","中位"+tl(ti.md)));else b.append(el("span","t","↑"+tl(ti.hi)),el("span","t","↓"+tl(ti.lo)))}
    b.append(el("small",null,x.lb));bars.append(b)});d.append(bars)}
  const wi=el("input");wi.type="date";wi.max=t;wi.value=t;wi.setAttribute("aria-label","补录浇水日期");
  const wr=el("div","cin");wr.append(wi,btn("补录浇水",()=>addRec(p.id,"w",wi.value),"sec"));d.append(wr);
@@ -171,7 +172,7 @@ function detail(p,s,t){
  d.append(ft);return d}
 function key(p){return stats(p).due||"9999-99-99"}
 function summary(){const n=plants.filter(p=>stats(p).isDue).length;$("#sum").textContent="共 "+plants.length+" 盆 · 已到预计时间："+n+" 盆";$("#sortBtn").textContent=sortMode==="due"?"排序：最该浇水":"排序：字母顺序"}
-function renderAll(){gT=tstat();const l=$("#list");l.replaceChildren();
+function renderAll(){const l=$("#list");l.replaceChildren();
  if(!plants.length){const e=el("div","empty","还没有植物。在下方输入名称添加第一盆。");
   l.append(e)}
  else{const a=[...plants];if(sortMode==="due")a.sort((x,y)=>key(x).localeCompare(key(y)));else a.sort((x,y)=>x.name.localeCompare(y.name,"zh"));
@@ -198,13 +199,15 @@ $("#sortBtn").addEventListener("click",()=>{sortMode=sortMode==="due"?"alpha":"d
 const CK="ptCfg",WK="ptWx",SK="ptSha";
 let cfg={owner:"",repo:"plant-data",path:"data.json",token:"",city:"",lat:null,lon:null,place:"",unit:"C"},sha=null,dirty=false,ver=0,syncing=false,pt,wt,WX={loc:"",d:{}},gT=null;
 try{Object.assign(cfg,JSON.parse(localStorage.getItem(CK)||"{}"));sha=localStorage.getItem(SK);dirty=localStorage.getItem("ptDirty")==="1";WX=JSON.parse(localStorage.getItem(WK)||"")||WX}catch(e){}
+if(WX.v!==2)WX={loc:"",v:2,d:{}};
 const hm=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())};
 const med=a=>{const x=[...a].sort((p,q)=>p-q),n=x.length;return n%2?x[(n-1)/2]:(x[n/2-1]+x[n/2])/2};
 const typ=(iv,i)=>{const pr=iv.slice(Math.max(0,i-5),i);return pr.length>=3?med(pr):null};
 const tl=c=>Math.round(cfg.unit==="F"?c*9/5+32:c)+"°";
 function avgT(from,to){let s=0,n=0;for(let d=addDays(from,1);d<=to;d=addDays(d,1))if(WX.d&&WX.d[d]!=null){s+=WX.d[d];n++}return n?s/n:null}
-function tstat(){const a=[];plants.forEach(p=>p.w.slice(1).forEach((d,i)=>{const t=avgT(p.w[i],d);if(t!=null)a.push(t)}));
- if(a.length<6)return null;const m=a.reduce((s,x)=>s+x,0)/a.length;return{m,s:Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/a.length)}}
+function tinfo(from,to){const a=[];for(let d=addDays(from,1);d<=to;d=addDays(d,1))if(WX.d&&WX.d[d])a.push(WX.d[d]);
+ if(!a.length)return null;const ms=a.map(x=>x[0]);
+ return{m:ms.reduce((s,x)=>s+x,0)/ms.length,md:med(ms),hi:Math.max(...a.map(x=>x[1])),lo:Math.min(...a.map(x=>x[2])),long:diff(from,to)>28}}
 function b64e(s){let r="";new TextEncoder().encode(s).forEach(b=>r+=String.fromCharCode(b));return btoa(r)}
 function b64d(s){return new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")),c=>c.charCodeAt(0)))}
 const ready=()=>cfg.owner&&cfg.repo&&cfg.path&&cfg.token;
@@ -231,11 +234,11 @@ async function sync(){if(!ready()){setSyn("未设置同步（点此打开设置�
  }catch(e){err=true;setSyn(e.st===401?"同步失败：令牌无效或已过期":e.st===403?"同步失败：令牌权限不足":e.st===404?"同步失败：找不到仓库或文件，请检查设置":"同步失败，已保存在本机（点此重试）")}
  finally{syncing=false}
  if(dirty&&!err){clearTimeout(pt);pt=setTimeout(sync,800)}}
-async function loadWeather(){if(cfg.lat==null)return;const loc=cfg.lat+","+cfg.lon;if(WX.loc!==loc)WX={loc,d:{}};
+async function loadWeather(){if(cfg.lat==null)return;const loc=cfg.lat+","+cfg.lon;if(WX.loc!==loc)WX={loc,v:2,d:{}};
  const ds=plants.flatMap(p=>p.w);if(!ds.length)return;const t=today(),from=ds.reduce((a,b)=>a<b?a:b);
  const need=[];for(let d=from;d<=t;d=addDays(d,1))if(WX.d[d]==null||d>=addDays(t,-3))need.push(d);
- try{const q="&latitude="+cfg.lat+"&longitude="+cfg.lon+"&daily=temperature_2m_mean&timezone=auto",e8=addDays(t,-8);
-  const ing=j=>{const x=j.daily;if(x)x.time.forEach((d,i)=>{if(x.temperature_2m_mean[i]!=null)WX.d[d]=x.temperature_2m_mean[i]})};
+ try{const q="&latitude="+cfg.lat+"&longitude="+cfg.lon+"&daily=temperature_2m_mean,temperature_2m_max,temperature_2m_min&timezone=auto",e8=addDays(t,-8);
+  const ing=j=>{const x=j.daily;if(x)x.time.forEach((d,i)=>{const m=x.temperature_2m_mean[i],hi=x.temperature_2m_max[i],lo=x.temperature_2m_min[i];if(m!=null&&hi!=null&&lo!=null)WX.d[d]=[m,hi,lo]})};
   if(need[0]<=e8){const r=await fetch("https://archive-api.open-meteo.com/v1/archive?start_date="+need[0]+"&end_date="+e8+q);if(r.ok)ing(await r.json())}
   const r2=await fetch("https://api.open-meteo.com/v1/forecast?past_days=10&forecast_days=1"+q);if(r2.ok)ing(await r2.json());
   localStorage.setItem(WK,JSON.stringify(WX));renderAll()}catch(e){}}
