@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>植物浇水记录</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#237a8f">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#eef2ef;--sf:#fff;--panel:#f5f8f6;--ink:#1c2a24;--mu:#66756d;--ln:#dbe3de;--wa:#237a8f;--wi:#fff;--due:#b8402a;--db:#fbe6e1;--ok:#e1eee6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#111916;--sf:#1a2420;--panel:#15201b;--ink:#e6efe9;--mu:#8fa197;--ln:#2a3832;--wa:#4fb0c6;--wi:#0b1a1e;--due:#f0846e;--db:#3a1f19;--ok:#24382f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#111916;--sf:#1a2420;--panel:#15201b;--ink:#e6efe9;--mu:#8fa197;--ln:#2a3832;--wa:#4fb0c6;--wi:#0b1a1e;--due:#f0846e;--db:#3a1f19;--ok:#24382f;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 12px 40px}
+h1{font-size:22px;margin:0 0 4px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--mu);font-size:13px}
+#msg{min-height:18px;margin:6px 0;font-size:13px;color:var(--wa)}
+.list{background:var(--sf);border:1px solid var(--ln);border-radius:12px;overflow:hidden}
+.plant+.plant{border-top:1px solid var(--ln)}
+.row{display:flex;align-items:center}
+.head{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:8px 4px 8px 12px;min-height:56px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.plant.due .head{box-shadow:inset 3px 0 0 var(--wa)}
+.nm{flex:1;min-width:0;display:flex;flex-direction:column}
+.name{font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub{font-size:12px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip{font-size:13px;font-variant-numeric:tabular-nums;color:var(--mu);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.due .chip{background:var(--ok);color:var(--ink);font-weight:600}
+.chev{width:8px;height:8px;border:solid var(--mu);border-width:0 2px 2px 0;transform:rotate(45deg);margin:0 6px 3px 2px;transition:transform .15s}
+.open .chev{transform:rotate(225deg);margin-bottom:-3px}
+.water{width:44px;height:44px;margin:0 10px 0 4px;flex:none;border-radius:50%;border:0;background:var(--wa);color:var(--wi);font-size:20px;cursor:pointer}
+.water.done{background:var(--ok);color:var(--ink);font-weight:700}
+.detail{background:var(--panel);padding:4px 12px 14px;border-top:1px dashed var(--ln)}
+h3{font-size:13px;margin:14px 0 6px}
+.facts{margin:0 0 8px;font-size:13px;color:var(--mu)}
+.bars{display:flex;gap:6px;overflow-x:auto;align-items:flex-end;padding-bottom:4px}
+.bar{display:flex;flex-direction:column;align-items:center;min-width:38px;font-size:11px;color:var(--mu)}
+.bar .v{color:var(--wa);font-weight:600;font-size:12px}
+.bar i{display:block;width:16px;background:var(--wa);opacity:.75;border-radius:4px 4px 1px 1px;margin:2px 0}
+.cin{display:flex;gap:8px;width:100%;margin:6px 0}
+.cin input{flex:1}
+.recs{max-height:150px;overflow-y:auto;margin-top:6px}
+.rec{display:flex;gap:8px;align-items:center;font-size:13px;padding:2px 0}
+.rec span:first-child{flex:1}
+.care{display:flex;flex-wrap:wrap;align-items:center;gap:0 8px;padding:6px 0;border-top:1px solid var(--ln);font-size:14px}
+.cl{font-weight:600;width:2.5em}
+.cv{flex:1;color:var(--mu);font-size:13px}
+input,textarea,select{font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--ln);border-radius:8px;background:var(--sf);color:var(--ink);min-width:0}
+button.sec{font:inherit;font-size:13px;padding:7px 12px;border:0;border-radius:8px;background:var(--wa);color:var(--wi);cursor:pointer}
+button.link{font:inherit;font-size:12px;background:none;border:0;color:var(--mu);padding:6px;cursor:pointer;text-decoration:underline}
+button.danger{color:var(--due)}
+:focus-visible{outline:2px solid var(--wa);outline-offset:2px}
+.ft{display:flex;gap:8px;align-items:center;margin-top:14px;padding-top:10px;border-top:1px solid var(--ln)}
+.ft input{flex:1}
+.empty{padding:22px 14px;text-align:center;color:var(--mu);font-size:14px}
+.add{display:flex;gap:8px;margin:14px 0}
+.add input{flex:1}
+.bk{font-size:13px;color:var(--mu)}
+.bk summary{cursor:pointer;padding:6px 0}
+textarea{width:100%;height:80px;margin:6px 0}
+.hint{font-size:12px;color:var(--mu)}
+.bar.long i{background:var(--due);opacity:1}
+.bar.cur i{background:none;border:2px dashed var(--wa);opacity:1}
+.bar.cur.long i{border-color:var(--due)}
+.bar .t{font-size:10px;white-space:nowrap}
+.bar .t.x,.bar .v.x{color:var(--due);font-weight:700}
+#syn{background:none;border:0;font:inherit;font-size:12px;color:var(--mu);padding:4px 0;cursor:pointer;text-align:left}
+.set{display:grid;grid-template-columns:6em 1fr;gap:8px;align-items:center;margin:8px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>植物浇水</h1>
+<div class="top"><span id="sum"></span><button id="sortBtn" class="link" type="button"></button></div>
+<button id="syn" type="button"></button>
+<p id="msg" role="status"></p>
+<div id="list" class="list"></div>
+<div class="add"><input id="newName" type="text" maxlength="40" placeholder="植物名称，例如：栀子 1" aria-label="植物名称"><button id="addBtn" class="sec" type="button">添加植物</button></div>
+<details class="bk" id="setBox"><summary>设置与同步</summary>
+<div class="set"><label for="cOwner">GitHub 用户名</label><input id="cOwner" autocapitalize="off" autocomplete="off"></div>
+<div class="set"><label for="cRepo">数据仓库名</label><input id="cRepo" autocapitalize="off"></div>
+<div class="set"><label for="cPath">数据文件名</label><input id="cPath" autocapitalize="off"></div>
+<div class="set"><label for="cTok">令牌</label><input id="cTok" type="password" autocomplete="off"></div>
+<div class="set"><label for="cCity">城市</label><input id="cCity" placeholder="城市名，中英文均可"></div>
+<div class="set"><label for="cSel">定位结果</label><select id="cSel"></select></div>
+<div class="set"><label for="cUnit">温度单位</label><select id="cUnit"><option value="C">°C</option><option value="F">°F</option></select></div>
+<div id="setBtns"></div></details>
+<details class="bk"><summary>备份与恢复</summary>
+<textarea id="ta" aria-label="备份内容" placeholder="导出的内容会显示在这里；导入时把备份文本粘贴到这里"></textarea>
+<div id="bkBtns"></div></details>
+<p class="hint">图例：柱子上方是浇水间隔天数，红色表示不少于最近几次中位数的 1.5 倍；柱子下方是期间室外平均气温，红色表示偏离所有间隔平均值 1.5 个标准差以上；虚线柱是“至今”未浇的天数。左侧蓝色条表示已到预计浇水时间（按最近几次间隔的中位数推算，仅供参考）。数据保存在你的 GitHub 数据仓库里，本机也留有一份缓存。</p>
+</main>
+<script>
+"use strict";
+const KEY="plantTracker_v2",$=s=>document.querySelector(s);
+let plants=[],open=new Set(),sortMode=(()=>{try{return localStorage.getItem("ptSort")==="alpha"?"alpha":"due"}catch(e){return"due"}})(),mt;
+const pad=n=>String(n).padStart(2,"0");
+const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today=()=>iso(new Date());
+const diff=(a,b)=>Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/864e5);
+const addDays=(d,n)=>{const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return iso(x)};
+const md=d=>d.slice(5).replace("-","/");
+const fmt=x=>Math.round(x*10)/10;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const ago=(d,t)=>{const n=diff(d,t);return n===0?"今天":n+"天前"};
+function norm(p){const u=a=>Array.isArray(a)?[...new Set(a.filter(x=>/^\d{4}-\d\d-\d\d$/.test(x)))].sort():[];
+ return{id:String(p.id||uid()),name:String(p.name||"未命名").slice(0,40),w:u(p.w||p.dates),f:u(p.f),a:u(p.a),r:u(p.r)}}
+try{const s=JSON.parse(localStorage.getItem(KEY)||"[]");if(Array.isArray(s))plants=s.map(norm)}catch(e){}
+function note(t){$("#msg").textContent=t;clearTimeout(mt);mt=setTimeout(()=>{$("#msg").textContent=""},4500)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(plants));localStorage.setItem("ptDirty","1")}catch(e){note("无法保存到本机，请及时导出备份")}dirty=true;ver++;clearTimeout(pt);pt=setTimeout(sync,800);clearTimeout(wt);wt=setTimeout(loadWeather,1500)}
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function btn(label,fn,cls){const b=el("button",cls,label);b.type="button";b.addEventListener("click",fn);return b}
+function confirmBtn(label,fn,cls){let t;const b=btn(label,()=>{if(b.dataset.arm){clearTimeout(t);fn();return}
+ b.dataset.arm=1;b.textContent="再点一次确认";t=setTimeout(()=>{delete b.dataset.arm;b.textContent=label},3000)},cls);return b}
+function stats(p){const w=p.w,t=today(),last=w.length?w[w.length-1]:null,iv=w.slice(1).map((d,i)=>diff(w[i],d));
+ const base=iv.length?med(iv.slice(-5)):null,due=last&&base!=null?addDays(last,Math.max(1,Math.round(base))):null;
+ return{last,iv,base,due,since:last?diff(last,t):null,isDue:!!due&&due<=t}}
+const find=id=>plants.find(p=>p.id===id);
+function refresh(id){gT=tstat();const old=document.querySelector('[data-id="'+id+'"]');if(!old){renderAll();return}
+ const n=renderPlant(find(id));old.replaceWith(n);n.querySelectorAll(".bars").forEach(b=>b.scrollLeft=b.scrollWidth);summary()}
+function commit(id){save();refresh(id)}
+function toggleToday(id){const p=find(id),t=today(),i=p.w.indexOf(t);if(i>=0)p.w.splice(i,1);else p.w.push(t);p.w.sort();commit(id)}
+function addRec(id,k,d){if(!d||d>today()){note("请选择今天或更早的日期");return}
+ const p=find(id);if(p[k].includes(d)){note("这一天已经记录过了");return}p[k].push(d);p[k].sort();commit(id)}
+function delRec(id,k,d){const p=find(id);p[k]=p[k].filter(x=>x!==d);commit(id)}
+function sub(s){if(!s.last)return"还没有浇水记录";if(s.base==null)return"上次 "+md(s.last)+"，间隔数据不足";
+ return"通常 "+fmt(s.base)+" 天 · 预计 "+md(s.due)+(s.isDue?"（已到）":"")}
+function renderPlant(p){
+ const s=stats(p),t=today(),isOpen=open.has(p.id),done=p.w.includes(t);
+ const box=el("div","plant"+(isOpen?" open":"")+(s.isDue?" due":""));box.dataset.id=p.id;
+ const row=el("div","row"),head=el("button","head");head.type="button";head.setAttribute("aria-expanded",isOpen);
+ const nm=el("span","nm");nm.append(el("span","name",p.name),el("span","sub",sub(s)));
+ head.append(nm,el("span","chip",s.since===null?"—":s.since===0?"今天":s.since+"天"),el("span","chev"));
+ head.addEventListener("click",()=>{isOpen?open.delete(p.id):open.add(p.id);refresh(p.id)});
+ const wb=btn(done?"✓":"💧",()=>toggleToday(p.id),"water"+(done?" done":""));
+ wb.setAttribute("aria-label",done?"撤销今天的浇水记录":"记录今天浇水");
+ row.append(head,wb);box.append(row);
+ if(isOpen)box.append(detail(p,s,t));
+ return box}
+function detail(p,s,t){
+ const d=el("div","detail");d.append(el("h3",null,"浇水"));
+
+ const m5=s.iv.length>=3?med(s.iv.slice(-5)):null;
+ d.append(el("p","facts",s.last?"上次 "+s.last+"（"+ago(s.last,t)+"）"+(s.base!=null?" · 通常 "+fmt(s.base)+" 天 · 预计下次 "+s.due:""):"还没有记录"));
+ const items=s.iv.map((v,i)=>({v,ty:typ(s.iv,i),tm:avgT(p.w[i],p.w[i+1]),lb:md(p.w[i+1])}));
+ if(s.last&&s.since>0)items.push({v:s.since,ty:typ(s.iv,s.iv.length),tm:avgT(s.last,t),lb:"至今",cur:1});
+ if(items.length){const bars=el("div","bars"),mx=Math.max(...items.map(x=>x.v),1);
+  items.forEach(x=>{const lg=x.ty!=null&&x.v>=1.5*x.ty,b=el("div","bar"+(lg?" long":"")+(x.cur?" cur":"")),c=el("i");
+   c.style.height=Math.max(6,40*x.v/mx)+"px";b.append(el("span","v"+(lg?" x":""),x.v),c);
+   if(x.tm!=null){const ex=gT&&Math.abs(x.tm-gT.m)>1.5*gT.s;b.append(el("span","t"+(ex?" x":""),tl(x.tm)+(ex?(x.tm>gT.m?"↑":"↓"):"")))}
+   b.append(el("small",null,x.lb));bars.append(b)});d.append(bars)}
+ const wi=el("input");wi.type="date";wi.max=t;wi.value=t;wi.setAttribute("aria-label","补录浇水日期");
+ const wr=el("div","cin");wr.append(wi,btn("补录浇水",()=>addRec(p.id,"w",wi.value),"sec"));d.append(wr);
+ if(p.w.length){const l=el("div","recs");
+  [...p.w].reverse().forEach(x=>{const i=p.w.indexOf(x),r=el("div","rec");
+   r.append(el("span",null,x),el("span",null,i?"距上次 "+diff(p.w[i-1],x)+" 天":"首次"),confirmBtn("删除",()=>delRec(p.id,"w",x),"link"));l.append(r)});d.append(l)}
+ d.append(el("h3",null,"养护"));
+ [["f","施肥"],["a","补酸"],["r","换盆"]].forEach(([k,label])=>{
+  const arr=p[k],last=arr[arr.length-1],r=el("div","care");
+  r.append(el("span","cl",label),el("span","cv",last?md(last)+"（"+ago(last,t)+"）":"未记录"));
+  if(last)r.append(confirmBtn("撤销",()=>delRec(p.id,k,last),"link"));
+  const inp=el("input");inp.type="date";inp.max=t;inp.value=t;inp.setAttribute("aria-label",label+"日期");
+  const c=el("div","cin");c.append(inp,btn("记录",()=>addRec(p.id,k,inp.value),"sec"));r.append(c);d.append(r)});
+ const ft=el("div","ft"),ni=el("input");ni.type="text";ni.value=p.name;ni.maxLength=40;ni.setAttribute("aria-label","植物名称");
+ ft.append(ni,btn("改名",()=>{const v=ni.value.trim();if(!v)return;p.name=v;commit(p.id)},"sec"),
+  confirmBtn("删除植物",()=>{plants=plants.filter(x=>x.id!==p.id);open.delete(p.id);save();renderAll()},"link danger"));
+ d.append(ft);return d}
+function key(p){return stats(p).due||"9999-99-99"}
+function summary(){const n=plants.filter(p=>stats(p).isDue).length;$("#sum").textContent="共 "+plants.length+" 盆 · 已到预计时间："+n+" 盆";$("#sortBtn").textContent=sortMode==="due"?"排序：最该浇水":"排序：字母顺序"}
+function renderAll(){gT=tstat();const l=$("#list");l.replaceChildren();
+ if(!plants.length){const e=el("div","empty","还没有植物。在下方输入名称添加第一盆。");
+  l.append(e)}
+ else{const a=[...plants];if(sortMode==="due")a.sort((x,y)=>key(x).localeCompare(key(y)));else a.sort((x,y)=>x.name.localeCompare(y.name,"zh"));
+  a.forEach(p=>l.append(renderPlant(p)));l.querySelectorAll(".bars").forEach(b=>b.scrollLeft=b.scrollWidth)}
+ summary()}
+function addPlant(){const i=$("#newName"),v=i.value.trim();if(!v){note("请先输入植物名称");return}
+ plants.push(norm({id:uid(),name:v}));i.value="";save();renderAll()}
+function demo(){const t=today();
+ const mk=(name,off,gaps,f)=>{let d=addDays(t,-off);const w=[d];gaps.forEach(g=>{d=addDays(d,-g);w.push(d)});
+  return norm({id:uid(),name,w,f:f?[addDays(t,-f)]:[]})};
+ plants=[mk("栀子 1",5,[4,5,4,5],20),mk("龟背竹",2,[7,8,7],35),mk("琴叶榕",9,[7,7,8],14),mk("玉露",12,[14,15,13],40),mk("绿萝",1,[6,6,7]),mk("蝴蝶兰",6,[7,7])];
+ save();renderAll()}
+const ta=$("#ta");
+$("#bkBtns").append(
+ btn("导出",()=>{const s=JSON.stringify({v:2,plants});ta.value=s;ta.select();
+  try{navigator.clipboard.writeText(s).then(()=>note("已复制，粘贴到备忘录保存即可"),()=>note("请长按文本框，全选并复制"))}catch(e){note("请长按文本框，全选并复制")}},"sec"),
+ confirmBtn("导入（覆盖现有）",()=>{try{const o=JSON.parse(ta.value),a=Array.isArray(o)?o:o.plants;if(!Array.isArray(a))throw 0;
+  plants=a.map(norm);open.clear();save();renderAll();note("已导入 "+plants.length+" 盆植物")}catch(e){note("格式不对，请粘贴完整的导出文本")}},"link"),
+ confirmBtn("清空全部",()=>{plants=[];open.clear();save();renderAll()},"link danger"));
+$("#addBtn").addEventListener("click",addPlant);
+$("#newName").addEventListener("keydown",e=>{if(e.key==="Enter")addPlant()});
+$("#sortBtn").addEventListener("click",()=>{sortMode=sortMode==="due"?"alpha":"due";try{localStorage.setItem("ptSort",sortMode)}catch(e){}renderAll()});
+
+const CK="ptCfg",WK="ptWx",SK="ptSha";
+let cfg={owner:"",repo:"plant-data",path:"data.json",token:"",city:"",lat:null,lon:null,place:"",unit:"C"},sha=null,dirty=false,ver=0,syncing=false,pt,wt,WX={loc:"",d:{}},gT=null;
+try{Object.assign(cfg,JSON.parse(localStorage.getItem(CK)||"{}"));sha=localStorage.getItem(SK);dirty=localStorage.getItem("ptDirty")==="1";WX=JSON.parse(localStorage.getItem(WK)||"")||WX}catch(e){}
+const hm=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())};
+const med=a=>{const x=[...a].sort((p,q)=>p-q),n=x.length;return n%2?x[(n-1)/2]:(x[n/2-1]+x[n/2])/2};
+const typ=(iv,i)=>{const pr=iv.slice(Math.max(0,i-5),i);return pr.length>=3?med(pr):null};
+const tl=c=>Math.round(cfg.unit==="F"?c*9/5+32:c)+"°";
+function avgT(from,to){let s=0,n=0;for(let d=addDays(from,1);d<=to;d=addDays(d,1))if(WX.d&&WX.d[d]!=null){s+=WX.d[d];n++}return n?s/n:null}
+function tstat(){const a=[];plants.forEach(p=>p.w.slice(1).forEach((d,i)=>{const t=avgT(p.w[i],d);if(t!=null)a.push(t)}));
+ if(a.length<6)return null;const m=a.reduce((s,x)=>s+x,0)/a.length;return{m,s:Math.sqrt(a.reduce((s,x)=>s+(x-m)**2,0)/a.length)}}
+function b64e(s){let r="";new TextEncoder().encode(s).forEach(b=>r+=String.fromCharCode(b));return btoa(r)}
+function b64d(s){return new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")),c=>c.charCodeAt(0)))}
+const ready=()=>cfg.owner&&cfg.repo&&cfg.path&&cfg.token;
+const ghUrl=()=>"https://api.github.com/repos/"+encodeURIComponent(cfg.owner)+"/"+encodeURIComponent(cfg.repo)+"/contents/"+cfg.path.split("/").map(encodeURIComponent).join("/");
+const hd=()=>({Authorization:"Bearer "+cfg.token,Accept:"application/vnd.github+json"});
+async function ghGet(){const r=await fetch(ghUrl()+"?t="+Date.now(),{headers:hd(),cache:"no-store"});if(!r.ok)throw{st:r.status};
+ const j=await r.json();let o={};try{o=JSON.parse(b64d(j.content))}catch(e){}return{sha:j.sha,plants:Array.isArray(o)?o:(o.plants||[])}}
+async function ghPut(){const body={message:"update "+new Date().toISOString(),content:b64e(JSON.stringify({v:2,plants},null,1))};if(sha)body.sha=sha;
+ const r=await fetch(ghUrl(),{method:"PUT",headers:{...hd(),"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok)throw{st:r.status};
+ sha=(await r.json()).content.sha;try{localStorage.setItem(SK,sha)}catch(e){}}
+function merge(a,b){const m=new Map();[...a,...b].forEach(p=>{const q=m.get(p.id);if(!q){m.set(p.id,norm(p));return}
+ ["w","f","a","r"].forEach(k=>q[k]=[...new Set([...q[k],...(p[k]||[])])].sort())});return[...m.values()]}
+function setSyn(t){$("#syn").textContent=t}
+async function sync(){if(!ready()){setSyn("未设置同步（点此打开设置）");return}if(syncing)return;
+ syncing=true;setSyn("同步中…");let err=false;
+ try{let rem=null;try{rem=await ghGet()}catch(e){if(e.st!==404)throw e}
+  if(rem){sha=rem.sha;const rp=rem.plants.map(norm);
+   if(dirty||(!rp.length&&plants.length)){plants=merge(plants,rp);dirty=true}else plants=rp}
+  if(dirty||!rem){for(let i=0;i<3;i++){const v0=ver;
+   try{await ghPut();if(ver===v0)dirty=false;break}
+   catch(e){if(e.st===409||e.st===422){const r2=await ghGet();sha=r2.sha;plants=merge(plants,r2.plants.map(norm))}else throw e}}}
+  try{localStorage.setItem(KEY,JSON.stringify(plants));localStorage.setItem("ptDirty",dirty?"1":"0")}catch(e){}
+  renderAll();loadWeather();setSyn(dirty?"同步未完成（点此重试）":"已同步 "+hm())
+ }catch(e){err=true;setSyn(e.st===401?"同步失败：令牌无效或已过期":e.st===403?"同步失败：令牌权限不足":e.st===404?"同步失败：找不到仓库或文件，请检查设置":"同步失败，已保存在本机（点此重试）")}
+ finally{syncing=false}
+ if(dirty&&!err){clearTimeout(pt);pt=setTimeout(sync,800)}}
+async function loadWeather(){if(cfg.lat==null)return;const loc=cfg.lat+","+cfg.lon;if(WX.loc!==loc)WX={loc,d:{}};
+ const ds=plants.flatMap(p=>p.w);if(!ds.length)return;const t=today(),from=ds.reduce((a,b)=>a<b?a:b);
+ const need=[];for(let d=from;d<=t;d=addDays(d,1))if(WX.d[d]==null||d>=addDays(t,-3))need.push(d);
+ try{const q="&latitude="+cfg.lat+"&longitude="+cfg.lon+"&daily=temperature_2m_mean&timezone=auto",e8=addDays(t,-8);
+  const ing=j=>{const x=j.daily;if(x)x.time.forEach((d,i)=>{if(x.temperature_2m_mean[i]!=null)WX.d[d]=x.temperature_2m_mean[i]})};
+  if(need[0]<=e8){const r=await fetch("https://archive-api.open-meteo.com/v1/archive?start_date="+need[0]+"&end_date="+e8+q);if(r.ok)ing(await r.json())}
+  const r2=await fetch("https://api.open-meteo.com/v1/forecast?past_days=10&forecast_days=1"+q);if(r2.ok)ing(await r2.json());
+  localStorage.setItem(WK,JSON.stringify(WX));renderAll()}catch(e){}}
+async function geo(){const q=$("#cCity").value.trim();if(!q){note("请先输入城市名");return}
+ try{const j=await(await fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=zh&name="+encodeURIComponent(q))).json(),sl=$("#cSel");sl.replaceChildren();
+  (j.results||[]).forEach(x=>{const o=el("option",null,[x.name,x.admin1,x.country].filter(Boolean).join("，"));o.value=x.latitude+","+x.longitude;sl.append(o)});
+  note(sl.options.length?"请在“定位结果”里选对城市，再点“保存设置并同步”":"没找到这个城市，换个写法试试")}catch(e){note("查找失败，请检查网络")}}
+function saveCfg(){cfg.owner=$("#cOwner").value.trim();cfg.repo=$("#cRepo").value.trim();cfg.path=$("#cPath").value.trim();cfg.token=$("#cTok").value.trim();cfg.unit=$("#cUnit").value;cfg.city=$("#cCity").value.trim();
+ const sl=$("#cSel");if(sl.value){const[a,b]=sl.value.split(",");cfg.lat=+a;cfg.lon=+b;cfg.place=sl.selectedOptions[0].textContent}
+ try{localStorage.setItem(CK,JSON.stringify(cfg))}catch(e){}note("设置已保存");renderAll();sync();loadWeather()}
+function loadCfgUI(){[["Owner","owner"],["Repo","repo"],["Path","path"],["Tok","token"],["City","city"],["Unit","unit"]].forEach(([k,f])=>{$("#c"+k).value=cfg[f]||""});
+ if(cfg.lat!=null){const o=el("option",null,cfg.place||cfg.lat+","+cfg.lon);o.value=cfg.lat+","+cfg.lon;$("#cSel").append(o)}}
+$("#setBtns").append(btn("查找城市",geo,"sec"),document.createTextNode(" "),btn("保存设置并同步",saveCfg,"sec"));
+$("#syn").addEventListener("click",()=>{if(!ready()){$("#setBox").open=true;$("#setBox").scrollIntoView()}else sync()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderAll();sync()}});
+window.addEventListener("online",sync);
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+loadCfgUI();renderAll();sync();loadWeather();
+</script>
+</body>
+</html>
