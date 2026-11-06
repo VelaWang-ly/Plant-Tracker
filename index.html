@@ -37,7 +37,7 @@ h1{font-size:22px;margin:0 0 4px}
 h3{font-size:13px;margin:14px 0 6px}
 .facts{margin:0 0 8px;font-size:13px;color:var(--mu)}
 .bars{display:flex;gap:6px;overflow-x:auto;align-items:flex-end;padding-bottom:4px}
-.bar{display:flex;flex-direction:column;align-items:center;min-width:44px;font-size:11px;color:var(--mu)}
+.bar{display:flex;flex-direction:column;align-items:center;min-width:50px;font-size:11px;color:var(--mu)}
 .bar .v{color:var(--wa);font-weight:600;font-size:12px}
 .bar i{display:block;width:16px;background:var(--wa);opacity:.75;border-radius:4px 4px 1px 1px;margin:2px 0}
 .cin{display:flex;gap:8px;width:100%;margin:6px 0}
@@ -69,12 +69,26 @@ textarea{width:100%;height:80px;margin:6px 0}
 .bar .t.x,.bar .v.x{color:var(--due);font-weight:700}
 #syn{background:none;border:0;font:inherit;font-size:12px;color:var(--mu);padding:4px 0;cursor:pointer;text-align:left}
 .set{display:grid;grid-template-columns:6em 1fr;gap:8px;align-items:center;margin:8px 0}
+.bar .t .x{color:var(--due);font-weight:700}
+#tabs{display:flex;gap:4px;margin:8px 0 6px}
+.tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px;border:0;border-radius:10px;background:none;color:var(--mu);font:inherit;cursor:pointer}
+.tab .ti{font-size:18px;line-height:1.2}
+.tab .tl{font-size:11px}
+.tab.on{background:var(--sf);color:var(--ink);box-shadow:0 0 0 1px var(--ln)}
+.srow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px;border-top:1px solid var(--ln)}
+.srow:first-child{border-top:0}
+.srow .name{flex:none;max-width:55%;font-size:15px}
+.srow .when{color:var(--mu);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.srow .when.none{opacity:.7}
+.srow.stack{flex-direction:column;gap:2px}
+.srow .note{font-size:13px;color:var(--mu);white-space:pre-wrap;overflow-wrap:anywhere}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <main>
-<h1>植物浇水</h1>
+<h1>Pflanzenpfleger</h1>
+<nav id="tabs" role="tablist" aria-label="视图"></nav>
 <div class="top"><span id="sum"></span><button id="sortBtn" class="link" type="button"></button></div>
 <button id="syn" type="button"></button>
 <p id="msg" role="status"></p>
@@ -92,12 +106,12 @@ textarea{width:100%;height:80px;margin:6px 0}
 <details class="bk"><summary>备份与恢复</summary>
 <textarea id="ta" aria-label="备份内容" placeholder="导出的内容会显示在这里；导入时把备份文本粘贴到这里"></textarea>
 <div id="bkBtns"></div></details>
-<p class="hint">图例：柱子上方是浇水间隔天数，红色表示不少于最近几次中位数的 1.5 倍；柱子下方依次是该期间的室外平均气温、最高气温（↑）和最低气温（↓），最高和最低取期间内每日最高、最低气温的极值；期间超过 4 周时，不显示最高和最低，改显示每日平均气温的中位数；虚线柱是“至今”未浇的天数。左侧蓝色条表示已到预计浇水时间（按最近几次间隔的中位数推算，仅供参考）。数据保存在你的 GitHub 数据仓库里，本机也留有一份缓存。</p>
+<p class="hint">图例：柱子上方是浇水间隔天数，红色表示不少于最近几次中位数的 1.5 倍；柱子下方是该期间每日最高气温（↑）和每日最低气温（↓）去掉最高、最低各一天后的平均值；括号里的红色数字，是期间内最高或最低的那天与该平均值的差，超过 5°C（约 9°F）才显示；期间短于 5 天或长于 28 天时，直接显示平均值；虚线柱是“至今”未浇的天数。左侧蓝色条表示已到预计浇水时间（按最近几次间隔的中位数推算，仅供参考）。数据保存在你的 GitHub 数据仓库里，本机也留有一份缓存。</p>
 </main>
 <script>
 "use strict";
 const KEY="plantTracker_v2",$=s=>document.querySelector(s);
-let plants=[],open=new Set(),sortMode=(()=>{try{return localStorage.getItem("ptSort")==="alpha"?"alpha":"due"}catch(e){return"due"}})(),mt;
+let plants=[],open=new Set(),tab="all",sortMode=(()=>{try{return localStorage.getItem("ptSort")==="alpha"?"alpha":"due"}catch(e){return"due"}})(),mt;
 const pad=n=>String(n).padStart(2,"0");
 const iso=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const today=()=>iso(new Date());
@@ -108,7 +122,7 @@ const fmt=x=>Math.round(x*10)/10;
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const ago=(d,t)=>{const n=diff(d,t);return n===0?"今天":n+"天前"};
 function norm(p){const u=a=>Array.isArray(a)?[...new Set(a.filter(x=>/^\d{4}-\d\d-\d\d$/.test(x)))].sort():[];
- return{id:String(p.id||uid()),name:String(p.name||"未命名").slice(0,40),w:u(p.w||p.dates),f:u(p.f),a:u(p.a),r:u(p.r)}}
+ return{id:String(p.id||uid()),name:String(p.name||"未命名").slice(0,40),w:u(p.w||p.dates),f:u(p.f),a:u(p.a),r:u(p.r),n:String(p.n||"").slice(0,500)}}
 try{const s=JSON.parse(localStorage.getItem(KEY)||"[]");if(Array.isArray(s))plants=s.map(norm)}catch(e){}
 function note(t){$("#msg").textContent=t;clearTimeout(mt);mt=setTimeout(()=>{$("#msg").textContent=""},4500)}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(plants));localStorage.setItem("ptDirty","1")}catch(e){note("无法保存到本机，请及时导出备份")}dirty=true;ver++;clearTimeout(pt);pt=setTimeout(sync,800);clearTimeout(wt);wt=setTimeout(loadWeather,1500)}
@@ -133,7 +147,7 @@ function renderPlant(p){
  const s=stats(p),t=today(),isOpen=open.has(p.id),done=p.w.includes(t);
  const box=el("div","plant"+(isOpen?" open":"")+(s.isDue?" due":""));box.dataset.id=p.id;
  const row=el("div","row"),head=el("button","head");head.type="button";head.setAttribute("aria-expanded",isOpen);
- const nm=el("span","nm");nm.append(el("span","name",p.name),el("span","sub",sub(s)));
+ const nm=el("span","nm");nm.append(el("span","name",p.name+(p.n?" 📝":"")),el("span","sub",sub(s)));
  head.append(nm,el("span","chip",s.since===null?"—":s.since===0?"今天":s.since+"天"),el("span","chev"));
  head.addEventListener("click",()=>{isOpen?open.delete(p.id):open.add(p.id);refresh(p.id)});
  const wb=btn(done?"✓":"💧",()=>toggleToday(p.id),"water"+(done?" done":""));
@@ -151,8 +165,9 @@ function detail(p,s,t){
  if(items.length){const bars=el("div","bars"),mx=Math.max(...items.map(x=>x.v),1);
   items.forEach(x=>{const lg=x.ty!=null&&x.v>=1.5*x.ty,b=el("div","bar"+(lg?" long":"")+(x.cur?" cur":"")),c=el("i");
    c.style.height=Math.max(6,40*x.v/mx)+"px";b.append(el("span","v"+(lg?" x":""),x.v),c);
-   if(x.ti){const ti=x.ti;b.append(el("span","t",tl(ti.m)));
-    if(ti.long)b.append(el("span","t","中位"+tl(ti.md)));else b.append(el("span","t","↑"+tl(ti.hi)),el("span","t","↓"+tl(ti.lo)))}
+   if(x.ti){[["↑",x.ti.hi],["↓",x.ti.lo]].forEach(([ar,sd])=>{const sp=el("span","t",ar+tl(sd.m));
+    const df=[];if(sd.up)df.push("+"+dd(sd.up));if(sd.dn)df.push("-"+dd(sd.dn));
+    if(df.length)sp.append(el("span","x","("+df.join(",")+")"));b.append(sp)})}
    b.append(el("small",null,x.lb));bars.append(b)});d.append(bars)}
  const wi=el("input");wi.type="date";wi.max=t;wi.value=t;wi.setAttribute("aria-label","补录浇水日期");
  const wr=el("div","cin");wr.append(wi,btn("补录浇水",()=>addRec(p.id,"w",wi.value),"sec"));d.append(wr);
@@ -166,14 +181,32 @@ function detail(p,s,t){
   if(last)r.append(confirmBtn("撤销",()=>delRec(p.id,k,last),"link"));
   const inp=el("input");inp.type="date";inp.max=t;inp.value=t;inp.setAttribute("aria-label",label+"日期");
   const c=el("div","cin");c.append(inp,btn("记录",()=>addRec(p.id,k,inp.value),"sec"));r.append(c);d.append(r)});
+ d.append(el("h3",null,"备注"));
+ const nt=el("textarea");nt.value=p.n;nt.maxLength=500;nt.setAttribute("aria-label","备注");
+ d.append(nt,btn("保存备注",()=>{p.n=nt.value.trim();commit(p.id)},"sec"));
  const ft=el("div","ft"),ni=el("input");ni.type="text";ni.value=p.name;ni.maxLength=40;ni.setAttribute("aria-label","植物名称");
  ft.append(ni,btn("改名",()=>{const v=ni.value.trim();if(!v)return;p.name=v;commit(p.id)},"sec"),
   confirmBtn("删除植物",()=>{plants=plants.filter(x=>x.id!==p.id);open.delete(p.id);save();renderAll()},"link danger"));
  d.append(ft);return d}
 function key(p){return stats(p).due||"9999-99-99"}
-function summary(){const n=plants.filter(p=>stats(p).isDue).length;$("#sum").textContent="共 "+plants.length+" 盆 · 已到预计时间："+n+" 盆";$("#sortBtn").textContent=sortMode==="due"?"排序：最该浇水":"排序：字母顺序"}
-function renderAll(){const l=$("#list");l.replaceChildren();
- if(!plants.length){const e=el("div","empty","还没有植物。在下方输入名称添加第一盆。");
+function summary(){const n=plants.filter(p=>stats(p).isDue).length;
+ $("#sum").textContent=tab==="n"?plants.filter(p=>p.n).length+" 盆有备注":tab!=="all"?"共 "+plants.length+" 盆 · 按上次时间由远到近":"共 "+plants.length+" 盆 · 已到预计时间："+n+" 盆";
+ $("#sortBtn").textContent=sortMode==="due"?"排序：最该浇水":"排序：字母顺序"}
+const TABS=[["all","🌿","全部"],["w","💧","浇水"],["f","🧪","施肥"],["a","🍋","补酸"],["r","🪴","换盆"],["n","📝","备注"]];
+function drawTabs(){const nv=$("#tabs");nv.replaceChildren();TABS.forEach(([k,ic,lb])=>{const b=el("button","tab"+(tab===k?" on":""));b.type="button";
+ b.setAttribute("role","tab");b.setAttribute("aria-selected",tab===k);b.append(el("span","ti",ic),el("span","tl",lb));
+ b.addEventListener("click",()=>{tab=k;renderAll()});nv.append(b)})}
+function renderTab(l){if(!plants.length){l.append(el("div","empty","还没有植物。"));return}
+ if(tab==="n"){const a=plants.filter(p=>p.n).sort((x,y)=>x.name.localeCompare(y.name,"zh"));
+  if(!a.length){l.append(el("div","empty","还没有备注。展开某盆花，在最下方写备注。"));return}
+  a.forEach(p=>{const r=el("div","srow stack");r.append(el("span","name",p.name),el("span","note",p.n));l.append(r)});return}
+ const t=today(),a=plants.map(p=>({p,d:p[tab][p[tab].length-1]||null}));
+ a.sort((x,y)=>(x.d||"").localeCompare(y.d||"")||x.p.name.localeCompare(y.p.name,"zh"));
+ a.forEach(({p,d})=>{const r=el("div","srow");r.append(el("span","name",p.name),
+  el("span","when"+(d?"":" none"),d?(d.slice(0,4)!==t.slice(0,4)?d:md(d))+"（"+ago(d,t)+"）":"未记录"));l.append(r)})}
+function renderAll(){const l=$("#list");l.replaceChildren();drawTabs();$("#sortBtn").style.display=tab==="all"?"":"none";document.querySelector(".add").style.display=tab==="all"?"":"none";
+ if(tab!=="all")renderTab(l);
+ else if(!plants.length){const e=el("div","empty","还没有植物。在下方输入名称添加第一盆。");
   l.append(e)}
  else{const a=[...plants];if(sortMode==="due")a.sort((x,y)=>key(x).localeCompare(key(y)));else a.sort((x,y)=>x.name.localeCompare(y.name,"zh"));
   a.forEach(p=>l.append(renderPlant(p)));l.querySelectorAll(".bars").forEach(b=>b.scrollLeft=b.scrollWidth)}
@@ -203,11 +236,15 @@ if(WX.v!==2)WX={loc:"",v:2,d:{}};
 const hm=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())};
 const med=a=>{const x=[...a].sort((p,q)=>p-q),n=x.length;return n%2?x[(n-1)/2]:(x[n/2-1]+x[n/2])/2};
 const typ=(iv,i)=>{const pr=iv.slice(Math.max(0,i-5),i);return pr.length>=3?med(pr):null};
+const dd=x=>Math.round(cfg.unit==="F"?x*1.8:x);
 const tl=c=>Math.round(cfg.unit==="F"?c*9/5+32:c)+"°";
 function avgT(from,to){let s=0,n=0;for(let d=addDays(from,1);d<=to;d=addDays(d,1))if(WX.d&&WX.d[d]!=null){s+=WX.d[d];n++}return n?s/n:null}
 function tinfo(from,to){const a=[];for(let d=addDays(from,1);d<=to;d=addDays(d,1))if(WX.d&&WX.d[d])a.push(WX.d[d]);
- if(!a.length)return null;const ms=a.map(x=>x[0]);
- return{m:ms.reduce((s,x)=>s+x,0)/ms.length,md:med(ms),hi:Math.max(...a.map(x=>x[1])),lo:Math.min(...a.map(x=>x[2])),long:diff(from,to)>28}}
+ if(!a.length)return null;const n=diff(from,to),avg=x=>x.reduce((s,v)=>s+v,0)/x.length;
+ const side=k=>{const v=a.map(x=>x[k]);if(n<5||n>28||v.length<3)return{m:avg(v)};
+  const q=[...v].sort((p,r)=>p-r),m=avg(q.slice(1,-1)),up=q[q.length-1]-m,dn=m-q[0];
+  return{m,up:up>5?up:0,dn:dn>5?dn:0}};
+ return{hi:side(1),lo:side(2)}}
 function b64e(s){let r="";new TextEncoder().encode(s).forEach(b=>r+=String.fromCharCode(b));return btoa(r)}
 function b64d(s){return new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g,"")),c=>c.charCodeAt(0)))}
 const ready=()=>cfg.owner&&cfg.repo&&cfg.path&&cfg.token;
@@ -218,7 +255,7 @@ async function ghGet(){const r=await fetch(ghUrl()+"?t="+Date.now(),{headers:hd(
 async function ghPut(){const body={message:"update "+new Date().toISOString(),content:b64e(JSON.stringify({v:2,plants},null,1))};if(sha)body.sha=sha;
  const r=await fetch(ghUrl(),{method:"PUT",headers:{...hd(),"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok)throw{st:r.status};
  sha=(await r.json()).content.sha;try{localStorage.setItem(SK,sha)}catch(e){}}
-function merge(a,b){const m=new Map();[...a,...b].forEach(p=>{const q=m.get(p.id);if(!q){m.set(p.id,norm(p));return}
+function merge(a,b){const m=new Map();[...a,...b].forEach(p=>{const q=m.get(p.id);if(!q){m.set(p.id,norm(p));return}if(!q.n&&p.n)q.n=String(p.n).slice(0,500);
  ["w","f","a","r"].forEach(k=>q[k]=[...new Set([...q[k],...(p[k]||[])])].sort())});return[...m.values()]}
 function setSyn(t){$("#syn").textContent=t}
 async function sync(){if(!ready()){setSyn("未设置同步（点此打开设置）");return}if(syncing)return;

@@ -1,6 +1,6 @@
 {
-  "name": "植物浇水记录",
-  "short_name": "浇水",
+  "name": "Pflanzenpfleger",
+  "short_name": "Pflanzenpfleger",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
