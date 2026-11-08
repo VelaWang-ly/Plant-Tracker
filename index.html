@@ -169,7 +169,7 @@ function detail(p,s,t){
     const df=[];if(sd.up)df.push("+"+dd(sd.up));if(sd.dn)df.push("-"+dd(sd.dn));
     if(df.length)sp.append(el("span","x","("+df.join(",")+")"));b.append(sp)})}
    b.append(el("small",null,x.lb));bars.append(b)});d.append(bars)}
- const wi=el("input");wi.type="date";wi.max=t;wi.value=t;wi.setAttribute("aria-label","补录浇水日期");
+ const wi=el("input");wi.type="date";wi.max=t;wi.value=t;wi.setAttribute("aria-label","补录浇水日期");wi.dataset.k=p.id+":w";wi.dataset.dv=t;
  const wr=el("div","cin");wr.append(wi,btn("补录浇水",()=>addRec(p.id,"w",wi.value),"sec"));d.append(wr);
  if(p.w.length){const l=el("div","recs");
   [...p.w].reverse().forEach(x=>{const i=p.w.indexOf(x),r=el("div","rec");
@@ -179,12 +179,12 @@ function detail(p,s,t){
   const arr=p[k],last=arr[arr.length-1],r=el("div","care");
   r.append(el("span","cl",label),el("span","cv",last?md(last)+"（"+ago(last,t)+"）":"未记录"));
   if(last)r.append(confirmBtn("撤销",()=>delRec(p.id,k,last),"link"));
-  const inp=el("input");inp.type="date";inp.max=t;inp.value=t;inp.setAttribute("aria-label",label+"日期");
+  const inp=el("input");inp.type="date";inp.max=t;inp.value=t;inp.setAttribute("aria-label",label+"日期");inp.dataset.k=p.id+":"+k;inp.dataset.dv=t;
   const c=el("div","cin");c.append(inp,btn("记录",()=>addRec(p.id,k,inp.value),"sec"));r.append(c);d.append(r)});
  d.append(el("h3",null,"备注"));
- const nt=el("textarea");nt.value=p.n;nt.maxLength=500;nt.setAttribute("aria-label","备注");
+ const nt=el("textarea");nt.value=p.n;nt.maxLength=500;nt.setAttribute("aria-label","备注");nt.dataset.k=p.id+":n";nt.dataset.dv=p.n;
  d.append(nt,btn("保存备注",()=>{p.n=nt.value.trim();commit(p.id)},"sec"));
- const ft=el("div","ft"),ni=el("input");ni.type="text";ni.value=p.name;ni.maxLength=40;ni.setAttribute("aria-label","植物名称");
+ const ft=el("div","ft"),ni=el("input");ni.type="text";ni.value=p.name;ni.maxLength=40;ni.setAttribute("aria-label","植物名称");ni.dataset.k=p.id+":name";ni.dataset.dv=p.name;
  ft.append(ni,btn("改名",()=>{const v=ni.value.trim();if(!v)return;p.name=v;commit(p.id)},"sec"),
   confirmBtn("删除植物",()=>{plants=plants.filter(x=>x.id!==p.id);open.delete(p.id);save();renderAll()},"link danger"));
  d.append(ft);return d}
@@ -263,9 +263,12 @@ function merge3(bs,loc,rem){const B=new Map(JSON.parse(bs).map(p=>[p.id,norm(p)]
   const o={id,name:b?(l.name!==b.name?l.name:r.name):l.name,n:b?(l.n!==b.n?l.n:r.n):(l.n||r.n)};
   ["w","f","a","r"].forEach(k=>{const bk=new Set(b?b[k]:[]),lk=new Set(l[k]),rk=new Set(r[k]);
    o[k]=[...new Set([...l[k],...r[k]])].filter(x=>!bk.has(x)||(lk.has(x)&&rk.has(x))).sort()});out.push(norm(o))});return out}
+function keepForm(fn){const m={};document.querySelectorAll("#list [data-k]").forEach(i=>{if(i.value!==i.dataset.dv)m[i.dataset.k]=i.value});fn();
+ document.querySelectorAll("#list [data-k]").forEach(i=>{if(m[i.dataset.k]!==undefined)i.value=m[i.dataset.k]})}
+const rerender=()=>keepForm(renderAll);
 function setSyn(t){$("#syn").textContent=t}
 async function sync(){if(!ready()){setSyn("未设置同步（点此打开设置）");return}if(syncing)return;
- syncing=true;setSyn("同步中…");let err=false;
+ syncing=true;setSyn("同步中…");let err=false;const prev=JSON.stringify(plants);
  try{let rem=null;try{rem=await ghGet()}catch(e){if(e.st!==404)throw e}
   if(rem){const rp=rem.plants.map(norm),same=rem.sha===sha;
    if(!dirty&&!(!rp.length&&plants.length)){plants=rp;sha=rem.sha;base=JSON.stringify(plants)}
@@ -275,18 +278,19 @@ async function sync(){if(!ready()){setSyn("未设置同步（点此打开设置�
    try{await ghPut(snap);base=snap;if(ver===v0)dirty=false;break}
    catch(e){if(e.st===409||e.st===422){const r2=await ghGet();sha=r2.sha;const rp2=r2.plants.map(norm);plants=base?merge3(base,plants,rp2):merge(plants,rp2)}else throw e}}}
   try{localStorage.setItem(KEY,JSON.stringify(plants));localStorage.setItem("ptDirty",dirty?"1":"0");if(base)localStorage.setItem("ptBase",base)}catch(e){}
-  renderAll();loadWeather();setSyn(dirty?"同步未完成（点此重试）":"已同步 "+hm())
+  if(JSON.stringify(plants)!==prev)rerender();loadWeather();setSyn(dirty?"同步未完成（点此重试）":"已同步 "+hm())
  }catch(e){err=true;setSyn(e.st===401?"同步失败：令牌无效或已过期":e.st===403?"同步失败：令牌权限不足":e.st===404?"同步失败：找不到仓库或文件，请检查设置":"同步失败，已保存在本机（点此重试）")}
  finally{syncing=false}
  if(dirty&&!err){clearTimeout(pt);pt=setTimeout(sync,800)}}
 async function loadWeather(){if(cfg.lat==null)return;const loc=cfg.lat+","+cfg.lon;if(WX.loc!==loc)WX={loc,v:2,d:{}};
  const ds=plants.flatMap(p=>p.w);if(!ds.length)return;const t=today(),from=ds.reduce((a,b)=>a<b?a:b);
- const need=[];for(let d=from;d<=t;d=addDays(d,1))if(WX.d[d]==null||d>=addDays(t,-3))need.push(d);
+ const stale=!WX.t||Date.now()-WX.t>18e5,need=[];for(let d=from;d<=t;d=addDays(d,1))if(WX.d[d]==null||(stale&&d>=addDays(t,-3)))need.push(d);
+ if(!need.length)return;let chg=false;
  try{const q="&latitude="+cfg.lat+"&longitude="+cfg.lon+"&daily=temperature_2m_mean,temperature_2m_max,temperature_2m_min&timezone=auto",e8=addDays(t,-8);
-  const ing=j=>{const x=j.daily;if(x)x.time.forEach((d,i)=>{const m=x.temperature_2m_mean[i],hi=x.temperature_2m_max[i],lo=x.temperature_2m_min[i];if(m!=null&&hi!=null&&lo!=null)WX.d[d]=[m,hi,lo]})};
+  const ing=j=>{const x=j.daily;if(x)x.time.forEach((d,i)=>{const m=x.temperature_2m_mean[i],hi=x.temperature_2m_max[i],lo=x.temperature_2m_min[i];if(m!=null&&hi!=null&&lo!=null){const nv=[m,hi,lo];if(String(WX.d[d])!==String(nv))chg=true;WX.d[d]=nv}})};
   if(need[0]<=e8){const r=await fetch("https://archive-api.open-meteo.com/v1/archive?start_date="+need[0]+"&end_date="+e8+q);if(r.ok)ing(await r.json())}
   const r2=await fetch("https://api.open-meteo.com/v1/forecast?past_days=10&forecast_days=1"+q);if(r2.ok)ing(await r2.json());
-  localStorage.setItem(WK,JSON.stringify(WX));renderAll()}catch(e){}}
+  WX.t=Date.now();localStorage.setItem(WK,JSON.stringify(WX));if(chg)rerender()}catch(e){}}
 async function geo(){const q=$("#cCity").value.trim();if(!q){note("请先输入城市名");return}
  try{const j=await(await fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=zh&name="+encodeURIComponent(q))).json(),sl=$("#cSel");sl.replaceChildren();
   (j.results||[]).forEach(x=>{const o=el("option",null,[x.name,x.admin1,x.country].filter(Boolean).join("，"));o.value=x.latitude+","+x.longitude;sl.append(o)});
@@ -298,7 +302,7 @@ function loadCfgUI(){[["Owner","owner"],["Repo","repo"],["Path","path"],["Tok","
  if(cfg.lat!=null){const o=el("option",null,cfg.place||cfg.lat+","+cfg.lon);o.value=cfg.lat+","+cfg.lon;$("#cSel").append(o)}}
 $("#setBtns").append(btn("查找城市",geo,"sec"),document.createTextNode(" "),btn("保存设置并同步",saveCfg,"sec"));
 $("#syn").addEventListener("click",()=>{if(!ready()){$("#setBox").open=true;$("#setBox").scrollIntoView()}else sync()});
-document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderAll();sync()}});
+let lastDay=today();document.addEventListener("visibilitychange",()=>{if(!document.hidden){if(lastDay!==today()){lastDay=today();rerender()}sync()}});
 window.addEventListener("online",sync);
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 loadCfgUI();renderAll();sync();loadWeather();
