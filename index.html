@@ -230,8 +230,8 @@ $("#newName").addEventListener("keydown",e=>{if(e.key==="Enter")addPlant()});
 $("#sortBtn").addEventListener("click",()=>{sortMode=sortMode==="due"?"alpha":"due";try{localStorage.setItem("ptSort",sortMode)}catch(e){}renderAll()});
 
 const CK="ptCfg",WK="ptWx",SK="ptSha";
-let cfg={owner:"",repo:"plant-data",path:"data.json",token:"",city:"",lat:null,lon:null,place:"",unit:"C"},sha=null,dirty=false,ver=0,syncing=false,pt,wt,WX={loc:"",d:{}},gT=null;
-try{Object.assign(cfg,JSON.parse(localStorage.getItem(CK)||"{}"));sha=localStorage.getItem(SK);dirty=localStorage.getItem("ptDirty")==="1";WX=JSON.parse(localStorage.getItem(WK)||"")||WX}catch(e){}
+let cfg={owner:"",repo:"plant-data",path:"data.json",token:"",city:"",lat:null,lon:null,place:"",unit:"C"},sha=null,base=null,dirty=false,ver=0,syncing=false,pt,wt,WX={loc:"",d:{}},gT=null;
+try{Object.assign(cfg,JSON.parse(localStorage.getItem(CK)||"{}"));sha=localStorage.getItem(SK);base=localStorage.getItem("ptBase");dirty=localStorage.getItem("ptDirty")==="1";WX=JSON.parse(localStorage.getItem(WK)||"")||WX}catch(e){}
 if(WX.v!==2)WX={loc:"",v:2,d:{}};
 const hm=()=>{const d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes())};
 const med=a=>{const x=[...a].sort((p,q)=>p-q),n=x.length;return n%2?x[(n-1)/2]:(x[n/2-1]+x[n/2])/2};
@@ -252,21 +252,29 @@ const ghUrl=()=>"https://api.github.com/repos/"+encodeURIComponent(cfg.owner)+"/
 const hd=()=>({Authorization:"Bearer "+cfg.token,Accept:"application/vnd.github+json"});
 async function ghGet(){const r=await fetch(ghUrl()+"?t="+Date.now(),{headers:hd(),cache:"no-store"});if(!r.ok)throw{st:r.status};
  const j=await r.json();let o={};try{o=JSON.parse(b64d(j.content))}catch(e){}return{sha:j.sha,plants:Array.isArray(o)?o:(o.plants||[])}}
-async function ghPut(){const body={message:"update "+new Date().toISOString(),content:b64e(JSON.stringify({v:2,plants},null,1))};if(sha)body.sha=sha;
+async function ghPut(snap){const body={message:"update "+new Date().toISOString(),content:b64e(JSON.stringify({v:2,plants:JSON.parse(snap)},null,1))};if(sha)body.sha=sha;
  const r=await fetch(ghUrl(),{method:"PUT",headers:{...hd(),"Content-Type":"application/json"},body:JSON.stringify(body)});if(!r.ok)throw{st:r.status};
  sha=(await r.json()).content.sha;try{localStorage.setItem(SK,sha)}catch(e){}}
 function merge(a,b){const m=new Map();[...a,...b].forEach(p=>{const q=m.get(p.id);if(!q){m.set(p.id,norm(p));return}if(!q.n&&p.n)q.n=String(p.n).slice(0,500);
  ["w","f","a","r"].forEach(k=>q[k]=[...new Set([...q[k],...(p[k]||[])])].sort())});return[...m.values()]}
+function merge3(bs,loc,rem){const B=new Map(JSON.parse(bs).map(p=>[p.id,norm(p)])),L=new Map(loc.map(p=>[p.id,p])),R=new Map(rem.map(p=>[p.id,p])),out=[];
+ new Set([...L.keys(),...R.keys()]).forEach(id=>{const b=B.get(id),l=L.get(id),r=R.get(id);
+  if(b&&(!l||!r))return;if(!l||!r){out.push(l||r);return}
+  const o={id,name:b?(l.name!==b.name?l.name:r.name):l.name,n:b?(l.n!==b.n?l.n:r.n):(l.n||r.n)};
+  ["w","f","a","r"].forEach(k=>{const bk=new Set(b?b[k]:[]),lk=new Set(l[k]),rk=new Set(r[k]);
+   o[k]=[...new Set([...l[k],...r[k]])].filter(x=>!bk.has(x)||(lk.has(x)&&rk.has(x))).sort()});out.push(norm(o))});return out}
 function setSyn(t){$("#syn").textContent=t}
 async function sync(){if(!ready()){setSyn("未设置同步（点此打开设置）");return}if(syncing)return;
  syncing=true;setSyn("同步中…");let err=false;
  try{let rem=null;try{rem=await ghGet()}catch(e){if(e.st!==404)throw e}
-  if(rem){sha=rem.sha;const rp=rem.plants.map(norm);
-   if(dirty||(!rp.length&&plants.length)){plants=merge(plants,rp);dirty=true}else plants=rp}
-  if(dirty||!rem){for(let i=0;i<3;i++){const v0=ver;
-   try{await ghPut();if(ver===v0)dirty=false;break}
-   catch(e){if(e.st===409||e.st===422){const r2=await ghGet();sha=r2.sha;plants=merge(plants,r2.plants.map(norm))}else throw e}}}
-  try{localStorage.setItem(KEY,JSON.stringify(plants));localStorage.setItem("ptDirty",dirty?"1":"0")}catch(e){}
+  if(rem){const rp=rem.plants.map(norm),same=rem.sha===sha;
+   if(!dirty&&!(!rp.length&&plants.length)){plants=rp;sha=rem.sha;base=JSON.stringify(plants)}
+   else if(!same){plants=base?merge3(base,plants,rp):merge(plants,rp);sha=rem.sha;dirty=true}
+   else dirty=true}
+  if(dirty||!rem){for(let i=0;i<3;i++){const v0=ver,snap=JSON.stringify(plants);
+   try{await ghPut(snap);base=snap;if(ver===v0)dirty=false;break}
+   catch(e){if(e.st===409||e.st===422){const r2=await ghGet();sha=r2.sha;const rp2=r2.plants.map(norm);plants=base?merge3(base,plants,rp2):merge(plants,rp2)}else throw e}}}
+  try{localStorage.setItem(KEY,JSON.stringify(plants));localStorage.setItem("ptDirty",dirty?"1":"0");if(base)localStorage.setItem("ptBase",base)}catch(e){}
   renderAll();loadWeather();setSyn(dirty?"同步未完成（点此重试）":"已同步 "+hm())
  }catch(e){err=true;setSyn(e.st===401?"同步失败：令牌无效或已过期":e.st===403?"同步失败：令牌权限不足":e.st===404?"同步失败：找不到仓库或文件，请检查设置":"同步失败，已保存在本机（点此重试）")}
  finally{syncing=false}
