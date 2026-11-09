@@ -190,7 +190,7 @@ function detail(p,s,t){
  d.append(ft);return d}
 function key(p){return stats(p).due||"9999-99-99"}
 function summary(){const n=plants.filter(p=>stats(p).isDue).length;
- $("#sum").textContent=tab==="n"?plants.filter(p=>p.n).length+" 盆有备注":tab!=="all"?"共 "+plants.length+" 盆 · 按上次时间由远到近":"共 "+plants.length+" 盆 · 已到预计时间："+n+" 盆";
+ $("#sum").textContent=tab==="n"?plants.filter(p=>p.n).length+" 盆有备注":tab==="w"?"共 "+plants.length+" 盆 · 按通常浇水间隔由短到长":tab!=="all"?"共 "+plants.length+" 盆 · 按上次时间由远到近":"共 "+plants.length+" 盆 · 已到预计时间："+n+" 盆";
  $("#sortBtn").textContent=sortMode==="due"?"排序：最该浇水":"排序：字母顺序"}
 const TABS=[["all","🌿","全部"],["w","💧","浇水"],["f","🧪","施肥"],["a","🍋","补酸"],["r","🪴","换盆"],["n","📝","备注"]];
 function drawTabs(){const nv=$("#tabs");nv.replaceChildren();TABS.forEach(([k,ic,lb])=>{const b=el("button","tab"+(tab===k?" on":""));b.type="button";
@@ -200,6 +200,11 @@ function renderTab(l){if(!plants.length){l.append(el("div","empty","还没有植
  if(tab==="n"){const a=plants.filter(p=>p.n).sort((x,y)=>x.name.localeCompare(y.name,"zh"));
   if(!a.length){l.append(el("div","empty","还没有备注。展开某盆花，在最下方写备注。"));return}
   a.forEach(p=>{const r=el("div","srow stack");r.append(el("span","name",p.name),el("span","note",p.n));l.append(r)});return}
+
+ if(tab==="w"){const a=plants.map(p=>{const s=stats(p);return{p,b:s.base,v:s.iv.slice(-5),n:s.iv.length}});
+  a.sort((x,y)=>(x.b==null)-(y.b==null)||(x.b||0)-(y.b||0)||x.p.name.localeCompare(y.p.name,"zh"));
+  a.forEach(({p,b,v,n})=>{const r=el("div","srow");r.append(el("span","name",p.name),
+   el("span","when"+(b==null?" none":""),b==null?(p.w.length?"数据不足":"未记录"):fmt(b)+" 天"+(n<3?"（仅 "+n+" 次）":"（"+Math.min(...v)+"–"+Math.max(...v)+"）")));l.append(r)});return}
  const t=today(),a=plants.map(p=>({p,d:p[tab][p[tab].length-1]||null}));
  a.sort((x,y)=>(x.d||"").localeCompare(y.d||"")||x.p.name.localeCompare(y.p.name,"zh"));
  a.forEach(({p,d})=>{const r=el("div","srow");r.append(el("span","name",p.name),
